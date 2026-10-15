@@ -1,202 +1,242 @@
+document.documentElement.classList.add("js");
+
 const LUMINANCE_BASE = [
-    [16, 11, 10, 16, 24, 40, 51, 61],
-    [12, 12, 14, 19, 26, 58, 60, 55],
-    [14, 13, 16, 24, 40, 57, 69, 56],
-    [14, 17, 22, 29, 51, 87, 80, 62],
-    [18, 22, 37, 56, 68, 109, 103, 77],
-    [24, 35, 55, 64, 81, 104, 113, 92],
-    [49, 64, 78, 87, 103, 121, 120, 101],
-    [72, 92, 95, 98, 112, 100, 103, 99]
+    [16, 11, 10, 16, 24, 40, 51, 61], [12, 12, 14, 19, 26, 58, 60, 55],
+    [14, 13, 16, 24, 40, 57, 69, 56], [14, 17, 22, 29, 51, 87, 80, 62],
+    [18, 22, 37, 56, 68, 109, 103, 77], [24, 35, 55, 64, 81, 104, 113, 92],
+    [49, 64, 78, 87, 103, 121, 120, 101], [72, 92, 95, 98, 112, 100, 103, 99]
 ];
-
 const CHROMINANCE_BASE = [
-    [17, 18, 24, 47, 99, 99, 99, 99],
-    [18, 21, 26, 66, 99, 99, 99, 99],
-    [24, 26, 56, 99, 99, 99, 99, 99],
-    [47, 66, 99, 99, 99, 99, 99, 99],
-    [99, 99, 99, 99, 99, 99, 99, 99],
-    [99, 99, 99, 99, 99, 99, 99, 99],
-    [99, 99, 99, 99, 99, 99, 99, 99],
-    [99, 99, 99, 99, 99, 99, 99, 99]
+    [17, 18, 24, 47, 99, 99, 99, 99], [18, 21, 26, 66, 99, 99, 99, 99],
+    [24, 26, 56, 99, 99, 99, 99, 99], [47, 66, 99, 99, 99, 99, 99, 99],
+    [99, 99, 99, 99, 99, 99, 99, 99], [99, 99, 99, 99, 99, 99, 99, 99],
+    [99, 99, 99, 99, 99, 99, 99, 99], [99, 99, 99, 99, 99, 99, 99, 99]
 ];
-
-const state = {
-    quality: 75,
-    originalData: null,
-    width: 480,
-    height: 320
-};
-
+const state = { quality: 75, preset: "landscape", originalData: null, previousTables: [null, null], width: 480, height: 320 };
+const isEnglish = document.documentElement.lang === "en";
+const presetLabels = isEnglish
+    ? { landscape: "Landscape", portrait: "Portrait", texture: "Checker / text" }
+    : { landscape: "Пейзаж", portrait: "Портрет", texture: "Шахматная / текст" };
 const elements = {
-    quality: document.querySelector('#quality-slider'),
-    qualityValue: document.querySelector('#quality-value'),
-    luminanceBody: document.querySelector('#luminance-table tbody'),
-    chrominanceBody: document.querySelector('#chrominance-table tbody'),
-    dctCanvas: document.querySelector('#dct-canvas'),
-    quantizationCanvas: document.querySelector('#quantization-canvas'),
-    originalCanvas: document.querySelector('#original-canvas'),
-    resultCanvas: document.querySelector('#result-canvas'),
-    fileSize: document.querySelector('#file-size'),
-    psnr: document.querySelector('#psnr'),
-    mse: document.querySelector('#mse'),
-    metricsStatus: document.querySelector('#metrics-status')
+    quality: document.querySelector("#quality-slider"), qualityValue: document.querySelector("#quality-value"),
+    luminanceBody: document.querySelector("#luminance-table tbody"), chrominanceBody: document.querySelector("#chrominance-table tbody"),
+    dctCanvas: document.querySelector("#dct-canvas"), quantizationCanvas: document.querySelector("#quantization-canvas"),
+    originalCanvas: document.querySelector("#original-canvas"), resultCanvas: document.querySelector("#result-canvas"),
+    colorOriginalCanvas: document.querySelector("#color-original-canvas"), channelPreview: document.querySelector("#channel-preview"),
+    yCanvas: document.querySelector("#y-canvas"), cbCanvas: document.querySelector("#cb-canvas"), crCanvas: document.querySelector("#cr-canvas"),
+    fileSize: document.querySelector("#file-size"), psnr: document.querySelector("#psnr"), mse: document.querySelector("#mse"), metricsStatus: document.querySelector("#metrics-status")
 };
 
+function clamp(value) { return Math.max(0, Math.min(255, value)); }
 function scaledTable(baseTable, quality) {
-    const scale = quality < 50
-        ? 5000 / quality
-        : 200 - quality * 2;
+    const scale = quality < 50 ? 5000 / quality : 200 - quality * 2;
     return baseTable.map(row => row.map(value => Math.max(1, Math.min(255, Math.round((value * scale + 50) / 100)))));
 }
-
-function renderTable(body, values) {
+function renderTable(body, values, previous) {
     body.replaceChildren();
-    values.forEach(row => {
-        const tableRow = document.createElement('tr');
-        row.forEach(value => {
-            const cell = document.createElement('td');
+    values.forEach((row, y) => {
+        const tableRow = document.createElement("tr");
+        row.forEach((value, x) => {
+            const cell = document.createElement("td");
             cell.textContent = String(value);
+            if (previous && previous[y][x] !== value) cell.className = "changed";
             tableRow.appendChild(cell);
         });
         body.appendChild(tableRow);
     });
 }
-
 function drawDctBasis() {
-    const context = elements.dctCanvas.getContext('2d');
+    const context = elements.dctCanvas.getContext("2d");
     const size = elements.dctCanvas.width / 8;
-    for (let v = 0; v < 8; v += 1) {
-        for (let u = 0; u < 8; u += 1) {
-            const offsetX = u * size;
-            const offsetY = v * size;
-            const cellSize = size / 8;
-            for (let y = 0; y < 8; y += 1) {
-                for (let x = 0; x < 8; x += 1) {
-                    const value = Math.round(127.5 + 127.5
-                        * Math.cos(((2 * x + 1) * u * Math.PI) / 16)
-                        * Math.cos(((2 * y + 1) * v * Math.PI) / 16));
-                    context.fillStyle = `rgb(${value}, ${value}, ${value})`;
-                    context.fillRect(offsetX + x * cellSize, offsetY + y * cellSize, cellSize, cellSize);
-                }
-            }
-            context.strokeStyle = '#b9b3a9';
-            context.strokeRect(offsetX + 0.5, offsetY + 0.5, size - 1, size - 1);
+    for (let v = 0; v < 8; v += 1) for (let u = 0; u < 8; u += 1) {
+        const offsetX = u * size, offsetY = v * size, cellSize = size / 8;
+        for (let y = 0; y < 8; y += 1) for (let x = 0; x < 8; x += 1) {
+            const value = Math.round(127.5 + 127.5 * Math.cos(((2 * x + 1) * u * Math.PI) / 16) * Math.cos(((2 * y + 1) * v * Math.PI) / 16));
+            context.fillStyle = `rgb(${value},${value},${value})`;
+            context.fillRect(offsetX + x * cellSize, offsetY + y * cellSize, cellSize, cellSize);
         }
+        context.strokeStyle = "#aaa49b";
+        context.strokeRect(offsetX + .5, offsetY + .5, size - 1, size - 1);
     }
 }
-
 function createOriginalImage() {
-    const canvas = document.createElement('canvas');
-    canvas.width = state.width;
-    canvas.height = state.height;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    const image = context.createImageData(state.width, state.height);
-    for (let y = 0; y < state.height; y += 1) {
-        for (let x = 0; x < state.width; x += 1) {
-            const index = (y * state.width + x) * 4;
-            const wave = Math.sin(x / 18) * 12 + Math.sin(y / 13) * 8;
+    const image = new ImageData(state.width, state.height);
+    for (let y = 0; y < state.height; y += 1) for (let x = 0; x < state.width; x += 1) {
+        const i = (y * state.width + x) * 4;
+        const wave = Math.sin(x / 18) * 12 + Math.sin(y / 13) * 8;
+        let red, green, blue;
+        if (state.preset === "texture") {
+            const stripe = (Math.sin(x / 3) + Math.sin(y / 4)) * 30;
+            red = 105 + stripe + wave; green = 75 + stripe * .7 + y * .25; blue = 55 + stripe * .35;
+        } else if (state.preset === "portrait") {
             const circle = ((x - 330) ** 2 + (y - 120) ** 2) < 65 ** 2;
-            image.data[index] = Math.max(0, Math.min(255, 48 + x * 0.18 + wave + (circle ? 90 : 0)));
-            image.data[index + 1] = Math.max(0, Math.min(255, 75 + y * 0.35 + wave));
-            image.data[index + 2] = Math.max(0, Math.min(255, 105 + (state.height - y) * 0.25 + wave + (circle ? 20 : 0)));
-            image.data[index + 3] = 255;
+            red = 48 + x * .18 + wave + (circle ? 110 : 0); green = 75 + y * .35 + wave; blue = 105 + (state.height - y) * .25 + wave + (circle ? 20 : 0);
+        } else {
+            red = 48 + x * .18 + wave; green = 75 + y * .35 + wave; blue = 105 + (state.height - y) * .25 + wave;
         }
+        image.data[i] = clamp(red); image.data[i + 1] = clamp(green); image.data[i + 2] = clamp(blue); image.data[i + 3] = 255;
     }
-    context.putImageData(image, 0, 0);
     state.originalData = image;
-    elements.originalCanvas.getContext('2d').putImageData(image, 0, 0);
+    [elements.originalCanvas, elements.colorOriginalCanvas].forEach(canvas => canvas.getContext("2d").putImageData(image, 0, 0));
+    drawChannels();
 }
-
+function drawChannels() {
+    const channels = [elements.yCanvas, elements.cbCanvas, elements.crCanvas];
+    const channelImage = channels.map(canvas => new ImageData(state.width, state.height));
+    for (let i = 0; i < state.originalData.data.length; i += 4) {
+        const r = state.originalData.data[i], g = state.originalData.data[i + 1], b = state.originalData.data[i + 2];
+        const y = clamp(.299 * r + .587 * g + .114 * b), cb = clamp(128 - .169 * r - .331 * g + .5 * b), cr = clamp(128 + .5 * r - .419 * g - .081 * b);
+        [y, cb, cr].forEach((value, index) => {
+            const data = channelImage[index].data;
+            data[i] = index === 0 ? value : value; data[i + 1] = index === 0 ? value : value; data[i + 2] = index === 0 ? value : value; data[i + 3] = 255;
+        });
+    }
+    channels.forEach((canvas, index) => {
+        const preview = document.createElement("canvas"); preview.width = state.width; preview.height = state.height;
+        preview.getContext("2d").putImageData(channelImage[index], 0, 0);
+        canvas.getContext("2d").drawImage(preview, 0, 0, canvas.width, canvas.height);
+    });
+}
 function reconstructImage() {
-    const source = state.originalData;
     const result = new ImageData(state.width, state.height);
     const severity = (100 - state.quality) / 100;
-    const blockSize = 8;
-    for (let y = 0; y < state.height; y += 1) {
-        for (let x = 0; x < state.width; x += 1) {
-            const index = (y * state.width + x) * 4;
-            const blockX = x % blockSize;
-            const blockY = y % blockSize;
-            const blockEdge = Math.min(blockX, blockY, blockSize - 1 - blockX, blockSize - 1 - blockY);
-            const noise = Math.sin(x * 0.55 + y * 0.31) * severity * 13;
-            const blockShift = blockEdge === 0 ? severity * 7 : 0;
-            for (let channel = 0; channel < 3; channel += 1) {
-                const original = source.data[index + channel];
-                const quantized = Math.round((original + noise + blockShift) / (1 + severity * 3)) * (1 + severity * 3);
-                result.data[index + channel] = Math.max(0, Math.min(255, quantized));
-            }
-            result.data[index + 3] = 255;
+    for (let y = 0; y < state.height; y += 1) for (let x = 0; x < state.width; x += 1) {
+        const index = (y * state.width + x) * 4, edge = Math.min(x % 8, y % 8, 7 - x % 8, 7 - y % 8);
+        const noise = Math.sin(x * .55 + y * .31) * severity * 13, blockShift = edge === 0 ? severity * 7 : 0;
+        for (let channel = 0; channel < 3; channel += 1) {
+            const original = state.originalData.data[index + channel], step = 1 + severity * 3;
+            result.data[index + channel] = clamp(Math.round((original + noise + blockShift) / step) * step);
         }
+        result.data[index + 3] = 255;
     }
     return result;
 }
-
 function drawQuantizationPreview(data) {
-    const canvas = elements.quantizationCanvas;
-    const context = canvas.getContext('2d');
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    const scaleX = canvas.width / state.width;
-    const scaleY = canvas.height / state.height;
-    const preview = document.createElement('canvas');
-    preview.width = state.width;
-    preview.height = state.height;
-    preview.getContext('2d').putImageData(data, 0, 0);
-    context.imageSmoothingEnabled = false;
-    context.drawImage(preview, 0, 0, canvas.width, canvas.height);
-    context.strokeStyle = `rgba(255, 255, 255, ${0.15 + (100 - state.quality) / 180})`;
-    context.lineWidth = Math.max(1, scaleX / 8);
-    for (let x = 8; x < state.width; x += 8) {
-        context.beginPath();
-        context.moveTo(x * scaleX, 0);
-        context.lineTo(x * scaleX, canvas.height);
-        context.stroke();
-    }
-    for (let y = 8; y < state.height; y += 8) {
-        context.beginPath();
-        context.moveTo(0, y * scaleY);
-        context.lineTo(canvas.width, y * scaleY);
-        context.stroke();
-    }
+    const canvas = elements.quantizationCanvas, context = canvas.getContext("2d");
+    const preview = document.createElement("canvas"); preview.width = state.width; preview.height = state.height;
+    preview.getContext("2d").putImageData(data, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height); context.imageSmoothingEnabled = false; context.drawImage(preview, 0, 0, canvas.width, canvas.height);
+    const scaleX = canvas.width / state.width, scaleY = canvas.height / state.height;
+    context.strokeStyle = `rgba(255,255,255,${.15 + (100 - state.quality) / 180})`; context.lineWidth = Math.max(1, scaleX / 8);
+    for (let x = 8; x < state.width; x += 8) { context.beginPath(); context.moveTo(x * scaleX, 0); context.lineTo(x * scaleX, canvas.height); context.stroke(); }
+    for (let y = 8; y < state.height; y += 8) { context.beginPath(); context.moveTo(0, y * scaleY); context.lineTo(canvas.width, y * scaleY); context.stroke(); }
 }
-
 function calculateMetrics(result) {
     let squaredError = 0;
-    for (let index = 0; index < state.originalData.data.length; index += 4) {
-        for (let channel = 0; channel < 3; channel += 1) {
-            const difference = state.originalData.data[index + channel] - result.data[index + channel];
-            squaredError += difference * difference;
-        }
+    for (let i = 0; i < state.originalData.data.length; i += 4) for (let channel = 0; channel < 3; channel += 1) {
+        const difference = state.originalData.data[i + channel] - result.data[i + channel]; squaredError += difference * difference;
     }
-    const sampleCount = state.width * state.height * 3;
-    const mse = squaredError / sampleCount;
-    const psnr = mse === 0 ? Infinity : 10 * Math.log10((255 ** 2) / mse);
-    const estimatedBytes = Math.round(state.width * state.height * (0.08 + state.quality / 850));
-    return { mse, psnr, estimatedBytes };
+    const mse = squaredError / (state.width * state.height * 3), psnr = mse === 0 ? Infinity : 10 * Math.log10(255 ** 2 / mse);
+    return { mse, psnr, estimatedBytes: Math.round(state.width * state.height * (.08 + state.quality / 850)) };
 }
-
 function updateVisualization() {
     state.quality = Number(elements.quality.value);
-    elements.qualityValue.textContent = String(state.quality);
-    elements.quality.setAttribute('aria-valuenow', String(state.quality));
-    renderTable(elements.luminanceBody, scaledTable(LUMINANCE_BASE, state.quality));
-    renderTable(elements.chrominanceBody, scaledTable(CHROMINANCE_BASE, state.quality));
-
-    const result = reconstructImage();
-    elements.resultCanvas.getContext('2d').putImageData(result, 0, 0);
-    drawQuantizationPreview(result);
-
-    const metrics = calculateMetrics(result);
-    elements.fileSize.textContent = `${(metrics.estimatedBytes / 1024).toFixed(1)} KB`;
-    elements.psnr.textContent = `${metrics.psnr.toFixed(1)} dB`;
-    elements.mse.textContent = metrics.mse.toFixed(2);
-    elements.metricsStatus.textContent = `Quality ${state.quality} percent. File size ${elements.fileSize.textContent}; PSNR ${elements.psnr.textContent}; MSE ${elements.mse.textContent}.`;
+    elements.qualityValue.textContent = String(state.quality); elements.quality.setAttribute("aria-valuenow", String(state.quality));
+    const tables = [scaledTable(LUMINANCE_BASE, state.quality), scaledTable(CHROMINANCE_BASE, state.quality)];
+    renderTable(elements.luminanceBody, tables[0], state.previousTables[0]); renderTable(elements.chrominanceBody, tables[1], state.previousTables[1]); state.previousTables = tables;
+    const result = reconstructImage(); elements.resultCanvas.getContext("2d").putImageData(result, 0, 0); drawQuantizationPreview(result);
+    const metrics = calculateMetrics(result), fileSize = `${(metrics.estimatedBytes / 1024).toFixed(1)} KB`, psnr = `${metrics.psnr.toFixed(1)} dB`, mse = metrics.mse.toFixed(2);
+    elements.fileSize.textContent = fileSize; elements.psnr.textContent = psnr; elements.mse.textContent = mse;
+    elements.metricsStatus.textContent = isEnglish
+        ? `Quality ${state.quality} percent. File size ${fileSize}; PSNR ${psnr}; MSE ${mse}.`
+        : `Качество ${state.quality} процентов. Размер ${fileSize}; PSNR ${psnr}; MSE ${mse}.`;
 }
+function updatePreset(preset) {
+    state.preset = preset;
+    document.querySelectorAll(".preset-button").forEach(button => {
+        const isActive = button.dataset.preset === preset;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+    });
+    createOriginalImage(); updateVisualization();
+}
+function renderPresetControls() {
+    document.querySelectorAll(".preset-buttons").forEach(container => {
+        container.replaceChildren();
+        Object.entries(presetLabels).forEach(([preset, label]) => {
+            const button = document.createElement("button");
+            button.className = "preset-button";
+            button.type = "button";
+            button.dataset.preset = preset;
+            button.textContent = label;
+            button.setAttribute("aria-pressed", String(preset === state.preset));
+            button.addEventListener("click", () => updatePreset(preset));
+            container.appendChild(button);
+        });
+    });
+}
+function setupScrollspy() {
+    const links = [...document.querySelectorAll(".toc a")], sections = links.map(link => document.querySelector(link.getAttribute("href")));
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+        if (entry.isIntersecting) links.forEach(link => link.classList.toggle("is-current", link.getAttribute("href") === `#${entry.target.id}`));
+    }), { rootMargin: "-20% 0px -65% 0px" });
+    sections.filter(Boolean).forEach(section => observer.observe(section));
+}
+function setupColorPreview() {
+    const demo = document.querySelector(".color-space-demo");
+    if (!demo) return;
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            elements.channelPreview.classList.add("is-visible");
+            observer.unobserve(entry.target);
+        });
+    }, { threshold: .2, rootMargin: "0px 0px -10% 0px" });
+    observer.observe(demo);
+}
+function setupRevealOnScroll() {
+    const sections = document.querySelectorAll(".article-section");
+    const reveal = section => section.classList.add("is-visible");
 
+    if (!("IntersectionObserver" in window)) {
+        sections.forEach(reveal);
+        return;
+    }
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            reveal(entry.target);
+            observer.unobserve(entry.target);
+        });
+    }, { threshold: .12, rootMargin: "0px 0px -8% 0px" });
+
+    sections.forEach(section => observer.observe(section));
+}
 function initialize() {
-    drawDctBasis();
-    createOriginalImage();
-    elements.quality.addEventListener('input', updateVisualization);
-    updateVisualization();
+    drawDctBasis(); renderPresetControls(); createOriginalImage(); updateVisualization(); setupScrollspy(); setupColorPreview(); setupRevealOnScroll();
+    elements.quality.addEventListener("input", updateVisualization);
+    const savedTheme = localStorage.getItem("jpeg-theme");
+    const themeToggle = document.querySelector("#theme-toggle");
+    if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+    const updateThemeLabel = () => {
+        const isDark = document.documentElement.dataset.theme === "dark";
+        const label = isEnglish
+            ? (isDark ? "Enable light theme" : "Enable dark theme")
+            : (isDark ? "Включить светлую тему" : "Включить тёмную тему");
+        themeToggle.setAttribute("aria-label", label);
+        themeToggle.setAttribute("title", label);
+    };
+    updateThemeLabel();
+    themeToggle.addEventListener("click", event => {
+        const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme; localStorage.setItem("jpeg-theme", theme);
+        updateThemeLabel();
+    });
+    const menuToggle = document.querySelector("#menu-toggle");
+    const toc = document.querySelector(".toc");
+    menuToggle.addEventListener("click", () => {
+        const isOpen = toc.classList.toggle("is-open");
+        menuToggle.classList.toggle("is-open", isOpen);
+        menuToggle.setAttribute("aria-expanded", String(isOpen));
+    });
+    toc.querySelectorAll("a").forEach(link => link.addEventListener("click", () => {
+        toc.classList.remove("is-open");
+        menuToggle.classList.remove("is-open");
+        menuToggle.setAttribute("aria-expanded", "false");
+    }));
+    const backToTop = document.querySelector("#back-to-top");
+    window.addEventListener("scroll", () => backToTop.classList.toggle("is-visible", window.scrollY > 500), { passive: true });
+    backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 }
-
 initialize();

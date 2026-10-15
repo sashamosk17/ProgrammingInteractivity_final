@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Интерактивная образовательная статья о сжатии JPEG.">
     <title>Как работает сжатие JPEG</title>
@@ -9,10 +10,22 @@
 </head>
 <body>
     <div class="page-shell">
+        <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false"><span></span><span></span><span></span></button>
         <aside class="toc" aria-label="Оглавление">
             <div class="toc-heading">
                 <p class="toc-title">Оглавление</p>
-                <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Переключить тему">Тёмная тема</button>
+               <div class="header-actions">
+                    <div class="lang-switch">
+                        <a class="lang-btn" href="index-en.html" lang="en">EN</a>
+                        <span class="lang-btn is-active">RU</span>
+                    </div>
+
+                    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Включить тёмную тему" title="Включить тёмную тему">
+                        <span class="theme-icon theme-icon-sun" aria-hidden="true">☼</span>
+                        <span class="theme-icon theme-icon-moon" aria-hidden="true">☾</span>
+                        <span class="sr-only">Переключить тему</span>
+                    </button>
+                </div>
             </div>
             <nav>
                 <a href="#introduction">Введение</a>
@@ -20,6 +33,7 @@
                 <a href="#dct">ДКП</a>
                 <a href="#quantization">Квантование</a>
                 <a href="#results">Результаты</a>
+                <a href="#references">Литература</a>
             </nav>
             <p class="toc-note">Интерактивная статья<br>JPEG / lossy coding</p>
         </aside>
@@ -30,14 +44,14 @@
                 <h1>Как работает сжатие JPEG</h1>
                 <p class="dek">Пошаговая визуализация цветового пространства, пространственных частот и квантования — этапа, который делает файл маленьким.</p>
                 <p class="byline">Data visualization note · 2026</p>
-                <div class="preset-picker" aria-labelledby="preset-title">
+                <!-- <div class="preset-picker" aria-labelledby="preset-title">
                     <span id="preset-title" class="mono-label">Тестовый пресет</span>
                     <div class="preset-buttons" role="group" aria-label="Выберите тестовое изображение">
                         <button class="preset-button is-active" type="button" data-preset="landscape">Градиент</button>
                         <button class="preset-button" type="button" data-preset="texture">Текстура</button>
                         <button class="preset-button" type="button" data-preset="portrait">Контраст</button>
                     </div>
-                </div>
+                </div> -->
             </header>
 
             <section id="introduction" class="article-section" aria-labelledby="introduction-title">
@@ -49,10 +63,14 @@
 
             <section id="color-space" class="article-section" aria-labelledby="color-space-title">
                 <h2 id="color-space-title">Цветовое пространство</h2>
-                <p>Экран использует RGB, но JPEG обычно работает с YCbCr. Канал Y содержит яркость, а Cb и Cr — цветность. Наведите курсор на оригинал (или сфокусируйте его клавиатурой), чтобы увидеть разложение изображения на каналы.</p>
+                <p>Экран использует RGB, но JPEG обычно работает с YCbCr. Канал Y содержит яркость, а Cb и Cr — цветность. При прокрутке к блоку появится разложение изображения на каналы.</p>
+                <div class="activity-controls" aria-label="Пресет для цветового пространства">
+                    <span class="mono-label">Пресет</span>
+                    <div class="preset-buttons" role="group"></div>
+                </div>
                 <div class="color-space-demo">
                     <figure class="color-original">
-                        <canvas id="color-original-canvas" width="480" height="320" tabindex="0" role="img" aria-label="Оригинальное тестовое изображение. Наведите курсор для показа каналов"></canvas>
+                        <canvas id="color-original-canvas" width="480" height="320" tabindex="0" role="img" aria-label="Оригинальное тестовое изображение"></canvas>
                         <figcaption>RGB: исходное представление</figcaption>
                     </figure>
                     <div id="channel-preview" class="channel-preview" aria-live="polite">
@@ -72,8 +90,11 @@
             <section id="dct" class="article-section" aria-labelledby="dct-title">
                 <h2 id="dct-title">Дискретное косинусное преобразование</h2>
                 <p>Каждый канал делится на блоки 8×8. ДКП заменяет 64 значения пикселей на 64 коэффициента. Верхний левый коэффициент описывает средний уровень, а движение вправо и вниз повышает пространственную частоту.</p>
+                <div class="activity-controls" aria-label="Пресет для ДКП">
+                    <span class="mono-label">Пресет</span><div class="preset-buttons" role="group"></div>
+                </div>
                 <div class="math-display" aria-label="Формула дискретного косинусного преобразования">
-                    F(u,v) = ¼ C(u)C(v) Σₓ₌₀⁷ Σᵧ₌₀⁷ f(x,y) cos((2x+1)uπ/16) cos((2y+1)vπ/16)
+                    $$ F(u,v) = \frac{1}{4} C(u)C(v) \sum_{x=0}^{7} \sum_{y=0}^{7} f(x,y) \cos\left(\frac{(2x+1)u\pi}{16}\right) \cos\left(\frac{(2y+1)v\pi}{16}\right) $$
                 </div>
                 <figure class="wide-figure">
                     <canvas id="dct-canvas" width="640" height="640" role="img" aria-label="Сетка из 64 базисных функций ДКП"></canvas>
@@ -85,7 +106,12 @@
             <section id="quantization" class="article-section" aria-labelledby="quantization-title">
                 <h2 id="quantization-title">Квантование</h2>
                 <p>Квантование делит каждый DCT-коэффициент на значение из таблицы и округляет результат. При низком качестве делители становятся больше, многие коэффициенты превращаются в нули, а мелкие детали исчезают.</p>
-                <div class="math-display" aria-label="Формула квантования">F̂(u,v) = round(F(u,v) / Q(u,v))  и  F̂<sub>reconstructed</sub>(u,v) = F̂(u,v) · Q(u,v)</div>
+                <div class="math-display" aria-label="Формула квантования">
+                    $$ \hat{F}(u,v) = \mathrm{round}\left( \frac{F(u,v)}{Q(u,v)} \right) \quad \text{и} \quad \hat{F}_{\text{reconstructed}}(u,v) = \hat{F}(u,v) \cdot Q(u,v) $$
+                </div>
+                <div class="activity-controls" aria-label="Пресет для квантования">
+                    <span class="mono-label">Пресет</span><div class="preset-buttons" role="group"></div>
+                </div>
                 <div class="quantization-layout">
                     <div class="control-panel">
                         <label for="quality-slider">Качество JPEG <output id="quality-value" for="quality-slider">75</output>%</label>
@@ -112,6 +138,9 @@
             <section id="results" class="article-section" aria-labelledby="results-title">
                 <h2 id="results-title">Результаты</h2>
                 <p>Метрики пересчитываются при каждом изменении качества и пресета. PSNR выше, а MSE ниже, когда восстановленное изображение ближе к оригиналу.</p>
+                <div class="activity-controls" aria-label="Пресет для результатов">
+                    <span class="mono-label">Пресет</span><div class="preset-buttons" role="group"></div>
+                </div>
                 <div class="result-grid">
                     <figure class="result-figure"><canvas id="original-canvas" width="480" height="320" role="img" aria-label="Оригинальное тестовое изображение"></canvas><figcaption>Рисунок 3a. Оригинал.</figcaption></figure>
                     <figure class="result-figure"><canvas id="result-canvas" width="480" height="320" role="img" aria-label="Восстановленное JPEG изображение"></canvas><figcaption>Рисунок 3b. Восстановление.</figcaption></figure>
@@ -129,9 +158,18 @@
                     <p id="metrics-status" class="sr-status" aria-live="polite"></p>
                 </div>
             </section>
+            <section id="references" class="article-section references" aria-labelledby="references-title">
+                <h2 id="references-title">Использованная литература</h2>
+                <ol>
+                    <li>Wallace, G. K. “The JPEG Still Picture Compression Standard.” <cite>IEEE Transactions on Consumer Electronics</cite>, 1991.</li>
+                    <li>ITU-T Recommendation T.81. <cite>Digital Compression and Coding of Continuous-Tone Still Images</cite>, 1992.</li>
+                    <li>Gonzalez, R. C., Woods, R. E. <cite>Digital Image Processing</cite>. Pearson.</li>
+                </ol>
+            </section>
             <footer class="article-footer"><p>JPEG — это компромисс. Ползунок показывает, в какой момент экономия места становится заметной для глаза.</p></footer>
         </main>
     </div>
+    <button id="back-to-top" class="back-to-top" type="button" aria-label="Вернуться наверх">↑</button>
     <script src="script.js"></script>
 </body>
 </html>

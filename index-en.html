@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <!-- Добавьте это перед </head> -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="An interactive educational article about JPEG compression.">
+    <title>How JPEG Compression Works</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="page-shell">
+        <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+        <aside class="toc" aria-label="Table of contents">
+            <div class="toc-heading">
+                <p class="toc-title">Contents</p>
+               <div class="header-actions">
+                    <div class="lang-switch">
+                        <span class="lang-btn is-active">EN</span>
+                        <a class="lang-btn" href="index.html" lang="ru">RU</a>
+                    </div>
+
+                    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Enable dark theme" title="Enable dark theme">
+                        <span class="theme-icon theme-icon-sun" aria-hidden="true">☼</span>
+                        <span class="theme-icon theme-icon-moon" aria-hidden="true">☾</span>
+                        <span class="sr-only">Toggle theme</span>
+                    </button>
+                </div>
+            </div>
+            <nav>
+                <a href="#introduction">Introduction</a>
+                <a href="#color-space">Color space</a>
+                <a href="#dct">DCT</a>
+                <a href="#quantization">Quantization</a>
+                <a href="#results">Results</a>
+                <a href="#references">References</a>
+            </nav>
+            <p class="toc-note">Interactive article<br>JPEG / lossy coding</p>
+        </aside>
+
+        <main class="article">
+            <header class="article-header">
+                <p class="kicker">Interactive textbook</p>
+                <h1>How JPEG Compression Works</h1>
+                <p class="dek">A step-by-step visualization of color space, spatial frequencies, and quantization — the stage that makes the file smaller.</p>                
+            </header>
+
+            <section id="introduction" class="article-section" aria-labelledby="introduction-title">
+                <h2 id="introduction-title">Introduction</h2>
+                <p>JPEG is a lossy format for continuous-tone images. It does not remove random pixels: instead, the image is converted into a form that better matches the limits of human vision.</p>
+                <p>This article follows the key stages of the algorithm using one test frame. Change the quality setting and watch the quantization tables, artifacts, and numerical metrics change together.</p>
+                <div class="note"><strong>How to read the visualization.</strong> The table values are divisors for DCT coefficients. The larger the divisor, the more coarsely the corresponding frequency is rounded.</div>
+            </section>
+
+            <section id="color-space" class="article-section" aria-labelledby="color-space-title">
+                <h2 id="color-space-title">Color space</h2>
+                <p>Displays use RGB, while JPEG usually works with YCbCr. The Y channel carries luminance; Cb and Cr carry chroma. Scroll to this block to reveal the channel decomposition.</p>
+                <div class="activity-controls" aria-label="Preset for color space">
+                    <span class="mono-label">Preset</span><div class="preset-buttons" role="group"></div>
+                </div>
+                <div class="color-space-demo">
+                    <figure class="color-original">
+                        <canvas id="color-original-canvas" width="480" height="320" tabindex="0" role="img" aria-label="Original test image"></canvas>
+                        <figcaption>RGB: original representation</figcaption>
+                    </figure>
+                    <div id="channel-preview" class="channel-preview" aria-live="polite">
+                        <figure><canvas id="y-canvas" width="160" height="107" aria-label="Y luminance channel"></canvas><figcaption>Y / luminance</figcaption></figure>
+                        <figure><canvas id="cb-canvas" width="160" height="107" aria-label="Cb chroma channel"></canvas><figcaption>Cb / blue-yellow</figcaption></figure>
+                        <figure><canvas id="cr-canvas" width="160" height="107" aria-label="Cr chroma channel"></canvas><figcaption>Cr / red-green</figcaption></figure>
+                    </div>
+                </div>
+                <div class="color-diagram" role="img" aria-label="RGB is transformed into Y, Cb, and Cr channels">
+                    <span class="color-node rgb-node">RGB</span><span class="arrow" aria-hidden="true">→</span>
+                    <span class="color-node y-node">Y<br><small>Luminance</small></span>
+                    <span class="color-node cb-node">Cb<br><small>Chroma</small></span>
+                    <span class="color-node cr-node">Cr<br><small>Chroma</small></span>
+                </div>
+            </section>
+
+            <section id="dct" class="article-section" aria-labelledby="dct-title">
+                <h2 id="dct-title">Discrete cosine transform</h2>
+                <p>Each channel is divided into 8×8 blocks. The DCT replaces 64 pixel values with 64 coefficients. The upper-left coefficient describes the average level; moving right and down increases spatial frequency.</p>
+                <div class="activity-controls" aria-label="Preset for DCT">
+                    <span class="mono-label">Preset</span><div class="preset-buttons" role="group"></div>
+                </div>
+                <div class="math-display" aria-label="Discrete cosine transform formula">
+                    $$ F(u,v) = \frac{1}{4} C(u)C(v) \sum_{x=0}^{7} \sum_{y=0}^{7} f(x,y) \cos\left(\frac{(2x+1)u\pi}{16}\right) \cos\left(\frac{(2y+1)v\pi}{16}\right) $$
+                </div>
+                <figure class="wide-figure">
+                    <canvas id="dct-canvas" width="640" height="640" role="img" aria-label="Grid of 64 DCT basis functions"></canvas>
+                    <figcaption>Figure 1. Sixty-four DCT basis functions: each tile is one spatial frequency.</figcaption>
+                </figure>
+                <p class="technical-note"><code>F(u,v)</code> is a weighted sum of pixels. The transform is reversible; information is discarded later, during quantization.</p>
+            </section>
+
+            <section id="quantization" class="article-section" aria-labelledby="quantization-title">
+                <h2 id="quantization-title">Quantization</h2>
+                <p>Quantization divides each DCT coefficient by a table value and rounds the result. At low quality, divisors become larger, many coefficients become zero, and fine detail disappears.</p>
+                <div class="math-display" aria-label="JPEG quantization formula">
+                    $$ \hat{F}(u,v) = \mathrm{round}\left( \frac{F(u,v)}{Q(u,v)} \right) \quad \text{and} \quad \hat{F}_{\text{reconstructed}}(u,v) = \hat{F}(u,v) \cdot Q(u,v) $$
+                </div>
+                <div class="activity-controls" aria-label="Preset for quantization">
+                    <span class="mono-label">Preset</span><div class="preset-buttons" role="group"></div>
+                </div>
+                <div class="quantization-layout">
+                    <div class="control-panel">
+                        <label for="quality-slider">JPEG quality <output id="quality-value" for="quality-slider">75</output>%</label>
+                        <input id="quality-slider" type="range" min="10" max="100" value="75" step="1" aria-valuemin="10" aria-valuemax="100" aria-valuenow="75" aria-describedby="quality-description">
+                        <p id="quality-description" class="control-description">Higher values preserve more high-frequency detail.</p>
+                    </div>
+                    <div class="quantization-columns">
+                        <figure class="table-figure"><div class="table-scroll"><table id="luminance-table"><caption>Y: luminance</caption><tbody></tbody></table></div><figcaption>Table 1. Luminance divisors.</figcaption></figure>
+                        <figure class="table-figure"><div class="table-scroll"><table id="chrominance-table"><caption>Cb/Cr: chroma</caption><tbody></tbody></table></div><figcaption>Table 2. Chroma divisors.</figcaption></figure>
+                        <figure class="quantization-figure"><canvas id="quantization-canvas" width="480" height="320" role="img" aria-label="Image fragment with quantization artifacts"></canvas><figcaption>Figure 2. Result at the selected quality; the grid shows 8×8 blocks.</figcaption></figure>
+                    </div>
+                </div>
+            </section>
+
+            <section id="results" class="article-section" aria-labelledby="results-title">
+                <h2 id="results-title">Results</h2>
+                <p>Metrics are recalculated whenever the quality or preset changes. PSNR is higher and MSE is lower when the reconstructed image is closer to the original.</p>
+                <div class="activity-controls" aria-label="Preset for results">
+                    <span class="mono-label">Preset</span><div class="preset-buttons" role="group"></div>
+                </div>
+                <div class="result-grid">
+                    <figure class="result-figure"><canvas id="original-canvas" width="480" height="320" role="img" aria-label="Original test image"></canvas><figcaption>Figure 3a. Original.</figcaption></figure>
+                    <figure class="result-figure"><canvas id="result-canvas" width="480" height="320" role="img" aria-label="Reconstructed JPEG image"></canvas><figcaption>Figure 3b. Reconstruction.</figcaption></figure>
+                </div>
+                <div class="metrics-wrap">
+                    <table class="metrics-table">
+                        <caption>Compression metrics</caption>
+                        <thead><tr><th scope="col">Metric</th><th scope="col">Value</th><th scope="col">Interpretation</th></tr></thead>
+                        <tbody>
+                            <tr><th scope="row">File Size</th><td id="file-size">—</td><td>Estimated encoded size</td></tr>
+                            <tr><th scope="row">PSNR</th><td id="psnr">—</td><td>Higher is closer to the original</td></tr>
+                            <tr><th scope="row">MSE</th><td id="mse">—</td><td>Mean squared pixel error</td></tr>
+                        </tbody>
+                    </table>
+                    <p id="metrics-status" class="sr-status" aria-live="polite"></p>
+                </div>
+            </section>
+            <section id="references" class="article-section references" aria-labelledby="references-title">
+                <h2 id="references-title">References</h2>
+                <ol>
+                    <li>Wallace, G. K. “The JPEG Still Picture Compression Standard.” <cite>IEEE Transactions on Consumer Electronics</cite>, 1991.</li>
+                    <li>ITU-T Recommendation T.81. <cite>Digital Compression and Coding of Continuous-Tone Still Images</cite>, 1992.</li>
+                    <li>Gonzalez, R. C., Woods, R. E. <cite>Digital Image Processing</cite>. Pearson.</li>
+                </ol>
+            </section>
+            <footer class="article-footer"><p>JPEG is a trade-off. The slider shows when saving space becomes noticeable to the eye.</p></footer>
+        </main>
+    </div>
+    <button id="back-to-top" class="back-to-top" type="button" aria-label="Back to top">↑</button>
+    <script src="script.js"></script>
+</body>
+</html>
