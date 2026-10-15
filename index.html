@@ -1,107 +1,137 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JPEG Compression Explorer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Интерактивная образовательная статья о сжатии JPEG.">
+    <title>Как работает сжатие JPEG</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="header-options">
-                <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Переключить тему" aria-pressed="false">
-                    <span class="toggle-track">
-                        <span class="toggle-icon sun" aria-hidden="true">☀</span>
-                        <span class="toggle-icon moon" aria-hidden="true">☾</span>
-                        <span class="toggle-knob"></span>
-                    </span>
-                </button>
+    <div class="page-shell">
+        <aside class="toc" aria-label="Оглавление">
+            <div class="toc-heading">
+                <p class="toc-title">Оглавление</p>
+                <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Переключить тему">Тёмная тема</button>
+            </div>
+            <nav>
+                <a href="#introduction">Введение</a>
+                <a href="#color-space">Цветовое пространство</a>
+                <a href="#dct">ДКП</a>
+                <a href="#quantization">Квантование</a>
+                <a href="#results">Результаты</a>
+            </nav>
+            <p class="toc-note">Интерактивная статья<br>JPEG / lossy coding</p>
+        </aside>
 
-                <div class="language-control">
-                    <img id="language-flag" class="language-flag" src="images/flag-ru.svg" alt="" aria-hidden="true">
-                    <button id="language-button" class="lang-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Выбрать язык">
-                        <span id="language-name">Русский</span>
-                        <span class="language-chevron" aria-hidden="true"></span>
-                    </button>
-                    <div id="language-menu" class="language-menu" role="listbox" aria-label="Выбор языка" hidden>
-                        <button class="language-option" type="button" role="option" data-language="ru" aria-selected="true">
-                            <img src="images/flag-ru.svg" alt="" aria-hidden="true">
-                            <span>Русский</span>
-                        </button>
-                        <button class="language-option" type="button" role="option" data-language="en" aria-selected="false">
-                            <img src="images/flag-gb.svg" alt="" aria-hidden="true">
-                            <span>English</span>
-                        </button>
-                        <button class="language-option" type="button" role="option" data-language="es" aria-selected="false">
-                            <img src="images/flag-es.svg" alt="" aria-hidden="true">
-                            <span>Español</span>
-                        </button>
+        <main class="article">
+            <header class="article-header">
+                <p class="kicker">Интерактивный учебник</p>
+                <h1>Как работает сжатие JPEG</h1>
+                <p class="dek">Пошаговая визуализация цветового пространства, пространственных частот и квантования — этапа, который делает файл маленьким.</p>
+                <p class="byline">Data visualization note · 2026</p>
+                <div class="preset-picker" aria-labelledby="preset-title">
+                    <span id="preset-title" class="mono-label">Тестовый пресет</span>
+                    <div class="preset-buttons" role="group" aria-label="Выберите тестовое изображение">
+                        <button class="preset-button is-active" type="button" data-preset="landscape">Градиент</button>
+                        <button class="preset-button" type="button" data-preset="texture">Текстура</button>
+                        <button class="preset-button" type="button" data-preset="portrait">Контраст</button>
                     </div>
                 </div>
-            </div>
-            <h1 data-i18n="title">JPEG Compression: What Gets Thrown Away?</h1>
-            <p class="subtitle" data-i18n="subtitle">Фото уменьшается в 10 раз, а разница почти незаметна. Что именно выбрасывается?</p>
-        </header>
+            </header>
 
-        <div class="controls">
-            <div class="image-selector">
-                <h2 data-i18n="imageLabel">Изображение</h2>
-                <button id="btn-photo" class="preset-btn active" type="button" aria-pressed="true" data-i18n="photo">Фото</button>
-                <button id="btn-text" class="preset-btn" type="button" aria-pressed="false" data-i18n="text">Текст</button>
-                <button id="btn-pattern" class="preset-btn" type="button" aria-pressed="false" data-i18n="pattern">Паттерн</button>
-                <label class="upload-btn" for="image-upload" data-i18n="upload">Загрузить файл</label>
-                <input id="image-upload" type="file" accept="image/*">
-            </div>
+            <section id="introduction" class="article-section" aria-labelledby="introduction-title">
+                <h2 id="introduction-title">Введение</h2>
+                <p>JPEG — формат с потерями для изображений с плавными тонами. Он не удаляет случайные пиксели: изображение переводится в форму, которая лучше соответствует ограничениям человеческого зрения.</p>
+                <p>В этой статье один и тот же тестовый кадр проходит через ключевые этапы алгоритма. Меняйте качество ниже и наблюдайте, как таблицы квантования, артефакты и численные метрики меняются одновременно.</p>
+                <div class="note"><strong>Как читать визуализацию.</strong> Числа в таблицах — делители DCT-коэффициентов. Чем больше делитель, тем грубее округляется соответствующая частота.</div>
+            </section>
 
-            <div class="quality-control">
-                <h2><span data-i18n="quality">Качество</span>: <output id="quality-value" for="quality-slider">80</output>%</h2>
-                <input type="range" id="quality-slider" min="10" max="100" value="80" aria-label="Качество JPEG" aria-describedby="quality-value">
-            </div>
-
-            <div class="stats" aria-live="polite" aria-atomic="true">
-                <div class="stat-item">
-                    <span class="stat-label" data-i18n="original">Оригинал:</span>
-                    <span id="original-size">-</span>
+            <section id="color-space" class="article-section" aria-labelledby="color-space-title">
+                <h2 id="color-space-title">Цветовое пространство</h2>
+                <p>Экран использует RGB, но JPEG обычно работает с YCbCr. Канал Y содержит яркость, а Cb и Cr — цветность. Наведите курсор на оригинал (или сфокусируйте его клавиатурой), чтобы увидеть разложение изображения на каналы.</p>
+                <div class="color-space-demo">
+                    <figure class="color-original">
+                        <canvas id="color-original-canvas" width="480" height="320" tabindex="0" role="img" aria-label="Оригинальное тестовое изображение. Наведите курсор для показа каналов"></canvas>
+                        <figcaption>RGB: исходное представление</figcaption>
+                    </figure>
+                    <div id="channel-preview" class="channel-preview" aria-live="polite">
+                        <figure><canvas id="y-canvas" width="160" height="107" aria-label="Канал Y, яркость"></canvas><figcaption>Y / яркость</figcaption></figure>
+                        <figure><canvas id="cb-canvas" width="160" height="107" aria-label="Канал Cb, цветность"></canvas><figcaption>Cb / сине-жёлтый</figcaption></figure>
+                        <figure><canvas id="cr-canvas" width="160" height="107" aria-label="Канал Cr, цветность"></canvas><figcaption>Cr / красно-зелёный</figcaption></figure>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label" data-i18n="jpeg">JPEG:</span>
-                    <span id="compressed-size">-</span>
+                <div class="color-diagram" role="img" aria-label="RGB преобразуется в каналы Y, Cb и Cr">
+                    <span class="color-node rgb-node">RGB</span><span class="arrow" aria-hidden="true">→</span>
+                    <span class="color-node y-node">Y<br><small>Яркость</small></span>
+                    <span class="color-node cb-node">Cb<br><small>Цветность</small></span>
+                    <span class="color-node cr-node">Cr<br><small>Цветность</small></span>
                 </div>
-                <div class="stat-item compression-ratio">
-                    <span class="stat-label" data-i18n="compression">Сжатие:</span>
-                    <span id="compression-ratio">-</span>
+            </section>
+
+            <section id="dct" class="article-section" aria-labelledby="dct-title">
+                <h2 id="dct-title">Дискретное косинусное преобразование</h2>
+                <p>Каждый канал делится на блоки 8×8. ДКП заменяет 64 значения пикселей на 64 коэффициента. Верхний левый коэффициент описывает средний уровень, а движение вправо и вниз повышает пространственную частоту.</p>
+                <div class="math-display" aria-label="Формула дискретного косинусного преобразования">
+                    F(u,v) = ¼ C(u)C(v) Σₓ₌₀⁷ Σᵧ₌₀⁷ f(x,y) cos((2x+1)uπ/16) cos((2y+1)vπ/16)
                 </div>
-            </div>
-        </div>
+                <figure class="wide-figure">
+                    <canvas id="dct-canvas" width="640" height="640" role="img" aria-label="Сетка из 64 базисных функций ДКП"></canvas>
+                    <figcaption>Рисунок 1. Шестьдесят четыре базисные функции ДКП: каждая плитка — одна пространственная частота.</figcaption>
+                </figure>
+                <p class="technical-note"><code>F(u,v)</code> — взвешенная сумма пикселей. Преобразование обратимо; информация теряется позже, на этапе квантования.</p>
+            </section>
 
-        <div class="canvas-container">
-            <div class="canvas-wrapper">
-                <h2 data-i18n="originalCanvas">Оригинал</h2>
-                <canvas id="canvas-original" role="img" aria-label="Оригинальное изображение"></canvas>
-            </div>
-            <div class="canvas-wrapper">
-                <h2 data-i18n="compressedCanvas">После JPEG-сжатия</h2>
-                <canvas id="canvas-compressed" role="img" aria-label="Изображение после JPEG-сжатия"></canvas>
-            </div>
-            <div class="canvas-wrapper">
-                <h2 data-i18n="differenceCanvas">Разница (усиление ×10)</h2>
-                <canvas id="canvas-difference" role="img" aria-label="Карта различий между изображениями"></canvas>
-                <p class="canvas-note" data-i18n="differenceNote">Красное = потерянная информация</p>
-            </div>
-        </div>
+            <section id="quantization" class="article-section" aria-labelledby="quantization-title">
+                <h2 id="quantization-title">Квантование</h2>
+                <p>Квантование делит каждый DCT-коэффициент на значение из таблицы и округляет результат. При низком качестве делители становятся больше, многие коэффициенты превращаются в нули, а мелкие детали исчезают.</p>
+                <div class="math-display" aria-label="Формула квантования">F̂(u,v) = round(F(u,v) / Q(u,v))  и  F̂<sub>reconstructed</sub>(u,v) = F̂(u,v) · Q(u,v)</div>
+                <div class="quantization-layout">
+                    <div class="control-panel">
+                        <label for="quality-slider">Качество JPEG <output id="quality-value" for="quality-slider">75</output>%</label>
+                        <input id="quality-slider" type="range" min="10" max="100" value="75" step="1" aria-valuemin="10" aria-valuemax="100" aria-valuenow="75" aria-describedby="quality-description">
+                        <p id="quality-description" class="control-description">Высокие значения сохраняют больше высокочастотных деталей.</p>
+                    </div>
+                    <div class="quantization-columns">
+                        <figure class="table-figure">
+                            <div class="table-scroll"><table id="luminance-table"><caption>Y: яркость</caption><tbody></tbody></table></div>
+                            <figcaption>Таблица 1. Делители яркости.</figcaption>
+                        </figure>
+                        <figure class="table-figure">
+                            <div class="table-scroll"><table id="chrominance-table"><caption>Cb/Cr: цветность</caption><tbody></tbody></table></div>
+                            <figcaption>Таблица 2. Делители цветности.</figcaption>
+                        </figure>
+                        <figure class="quantization-figure">
+                            <canvas id="quantization-canvas" width="480" height="320" role="img" aria-label="Фрагмент изображения с артефактами квантования"></canvas>
+                            <figcaption>Рисунок 2. Результат при выбранном качестве; сетка показывает блоки 8×8.</figcaption>
+                        </figure>
+                    </div>
+                </div>
+            </section>
 
-        <div class="explanation">
-            <h2 data-i18n="howItWorks">Как это работает</h2>
-            <ul>
-                <li><strong data-i18n="explanation1Title">JPEG отбрасывает высокочастотные детали</strong> <span data-i18n="explanation1Text">— мелкие текстуры и резкие границы</span></li>
-                <li><strong data-i18n="explanation2Title">Карта разницы показывает потери</strong> <span data-i18n="explanation2Text">— они усилены в 10 раз</span></li>
-                <li><strong data-i18n="explanation3Title">Ниже качество — меньше файл</strong> <span data-i18n="explanation3Text">, но заметнее артефакты</span></li>
-                <li><strong data-i18n="explanation4Title">Фото обычно сжимаются лучше</strong> <span data-i18n="explanation4Text">, чем текст и повторяющиеся узоры</span></li>
-            </ul>
-        </div>
+            <section id="results" class="article-section" aria-labelledby="results-title">
+                <h2 id="results-title">Результаты</h2>
+                <p>Метрики пересчитываются при каждом изменении качества и пресета. PSNR выше, а MSE ниже, когда восстановленное изображение ближе к оригиналу.</p>
+                <div class="result-grid">
+                    <figure class="result-figure"><canvas id="original-canvas" width="480" height="320" role="img" aria-label="Оригинальное тестовое изображение"></canvas><figcaption>Рисунок 3a. Оригинал.</figcaption></figure>
+                    <figure class="result-figure"><canvas id="result-canvas" width="480" height="320" role="img" aria-label="Восстановленное JPEG изображение"></canvas><figcaption>Рисунок 3b. Восстановление.</figcaption></figure>
+                </div>
+                <div class="metrics-wrap">
+                    <table class="metrics-table">
+                        <caption>Метрики сжатия</caption>
+                        <thead><tr><th scope="col">Метрика</th><th scope="col">Значение</th><th scope="col">Интерпретация</th></tr></thead>
+                        <tbody>
+                            <tr><th scope="row">File Size</th><td id="file-size">—</td><td>Оценка размера кодированного файла</td></tr>
+                            <tr><th scope="row">PSNR</th><td id="psnr">—</td><td>Чем выше, тем ближе к оригиналу</td></tr>
+                            <tr><th scope="row">MSE</th><td id="mse">—</td><td>Средняя квадратичная ошибка</td></tr>
+                        </tbody>
+                    </table>
+                    <p id="metrics-status" class="sr-status" aria-live="polite"></p>
+                </div>
+            </section>
+            <footer class="article-footer"><p>JPEG — это компромисс. Ползунок показывает, в какой момент экономия места становится заметной для глаза.</p></footer>
+        </main>
     </div>
-
-    <script type="module" src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
