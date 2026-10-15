@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPEG Compression Explorer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-options">
+                <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Переключить тему" aria-pressed="false">
+                    <span class="toggle-track">
+                        <span class="toggle-icon sun" aria-hidden="true">☀</span>
+                        <span class="toggle-icon moon" aria-hidden="true">☾</span>
+                        <span class="toggle-knob"></span>
+                    </span>
+                </button>
+
+                <div class="language-control">
+                    <img id="language-flag" class="language-flag" src="images/flag-ru.svg" alt="" aria-hidden="true">
+                    <button id="language-button" class="lang-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Выбрать язык">
+                        <span id="language-name">Русский</span>
+                        <span class="language-chevron" aria-hidden="true"></span>
+                    </button>
+                    <div id="language-menu" class="language-menu" role="listbox" aria-label="Выбор языка" hidden>
+                        <button class="language-option" type="button" role="option" data-language="ru" aria-selected="true">
+                            <img src="images/flag-ru.svg" alt="" aria-hidden="true">
+                            <span>Русский</span>
+                        </button>
+                        <button class="language-option" type="button" role="option" data-language="en" aria-selected="false">
+                            <img src="images/flag-gb.svg" alt="" aria-hidden="true">
+                            <span>English</span>
+                        </button>
+                        <button class="language-option" type="button" role="option" data-language="es" aria-selected="false">
+                            <img src="images/flag-es.svg" alt="" aria-hidden="true">
+                            <span>Español</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <h1 data-i18n="title">JPEG Compression: What Gets Thrown Away?</h1>
+            <p class="subtitle" data-i18n="subtitle">Фото уменьшается в 10 раз, а разница почти незаметна. Что именно выбрасывается?</p>
+        </header>
+
+        <div class="controls">
+            <div class="image-selector">
+                <h2 data-i18n="imageLabel">Изображение</h2>
+                <button id="btn-photo" class="preset-btn active" type="button" aria-pressed="true" data-i18n="photo">Фото</button>
+                <button id="btn-text" class="preset-btn" type="button" aria-pressed="false" data-i18n="text">Текст</button>
+                <button id="btn-pattern" class="preset-btn" type="button" aria-pressed="false" data-i18n="pattern">Паттерн</button>
+                <label class="upload-btn" for="image-upload" data-i18n="upload">Загрузить файл</label>
+                <input id="image-upload" type="file" accept="image/*">
+            </div>
+
+            <div class="quality-control">
+                <h2><span data-i18n="quality">Качество</span>: <output id="quality-value" for="quality-slider">80</output>%</h2>
+                <input type="range" id="quality-slider" min="10" max="100" value="80" aria-label="Качество JPEG" aria-describedby="quality-value">
+            </div>
+
+            <div class="stats" aria-live="polite" aria-atomic="true">
+                <div class="stat-item">
+                    <span class="stat-label" data-i18n="original">Оригинал:</span>
+                    <span id="original-size">-</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label" data-i18n="jpeg">JPEG:</span>
+                    <span id="compressed-size">-</span>
+                </div>
+                <div class="stat-item compression-ratio">
+                    <span class="stat-label" data-i18n="compression">Сжатие:</span>
+                    <span id="compression-ratio">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <h2 data-i18n="originalCanvas">Оригинал</h2>
+                <canvas id="canvas-original" role="img" aria-label="Оригинальное изображение"></canvas>
+            </div>
+            <div class="canvas-wrapper">
+                <h2 data-i18n="compressedCanvas">После JPEG-сжатия</h2>
+                <canvas id="canvas-compressed" role="img" aria-label="Изображение после JPEG-сжатия"></canvas>
+            </div>
+            <div class="canvas-wrapper">
+                <h2 data-i18n="differenceCanvas">Разница (усиление ×10)</h2>
+                <canvas id="canvas-difference" role="img" aria-label="Карта различий между изображениями"></canvas>
+                <p class="canvas-note" data-i18n="differenceNote">Красное = потерянная информация</p>
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h2 data-i18n="howItWorks">Как это работает</h2>
+            <ul>
+                <li><strong data-i18n="explanation1Title">JPEG отбрасывает высокочастотные детали</strong> <span data-i18n="explanation1Text">— мелкие текстуры и резкие границы</span></li>
+                <li><strong data-i18n="explanation2Title">Карта разницы показывает потери</strong> <span data-i18n="explanation2Text">— они усилены в 10 раз</span></li>
+                <li><strong data-i18n="explanation3Title">Ниже качество — меньше файл</strong> <span data-i18n="explanation3Text">, но заметнее артефакты</span></li>
+                <li><strong data-i18n="explanation4Title">Фото обычно сжимаются лучше</strong> <span data-i18n="explanation4Text">, чем текст и повторяющиеся узоры</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
