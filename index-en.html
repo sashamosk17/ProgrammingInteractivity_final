@@ -56,6 +56,9 @@
             <section id="color-space" class="article-section" aria-labelledby="color-space-title">
                 <h2 id="color-space-title">Color space</h2>
                 <p>Displays use RGB, while JPEG usually works with YCbCr. The Y channel carries luminance; Cb and Cr carry chroma. Scroll to this block to reveal the channel decomposition.</p>
+                <div class="note">
+                    <strong>Chroma Subsampling.</strong> The human eye is much more sensitive to changes in brightness than to color details. Because of this, the resolution of the Cb and Cr channels is usually reduced by a factor of 2 or 4 (e.g., 4:2:2 or 4:2:0 formats) before compression even begins. This physically discards up to half the data with almost no noticeable visual loss.
+                </div>
                 <div class="activity-controls" aria-label="Preset for color space">
                     <span class="mono-label">Preset</span><div class="preset-buttons" role="group"></div>
                 </div>
@@ -64,34 +67,42 @@
                         <canvas id="color-original-canvas" width="480" height="320" tabindex="0" role="img" aria-label="Original test image"></canvas>
                         <figcaption>RGB: original representation</figcaption>
                     </figure>
-                    <div id="channel-preview" class="channel-preview" aria-live="polite">
-                        <figure><canvas id="y-canvas" width="160" height="107" aria-label="Y luminance channel"></canvas><figcaption>Y / luminance</figcaption></figure>
-                        <figure><canvas id="cb-canvas" width="160" height="107" aria-label="Cb chroma channel"></canvas><figcaption>Cb / blue-yellow</figcaption></figure>
-                        <figure><canvas id="cr-canvas" width="160" height="107" aria-label="Cr chroma channel"></canvas><figcaption>Cr / red-green</figcaption></figure>
+                    <div class="color-space-details">
+                        <div id="channel-preview" class="channel-preview" aria-live="polite">
+                            <figure><canvas id="y-canvas" width="160" height="107" aria-label="Y luminance channel"></canvas><figcaption>Y / luminance</figcaption></figure>
+                            <figure><canvas id="cb-canvas" width="160" height="107" aria-label="Cb chroma channel"></canvas><figcaption>Cb / blue-yellow</figcaption></figure>
+                            <figure><canvas id="cr-canvas" width="160" height="107" aria-label="Cr chroma channel"></canvas><figcaption>Cr / red-green</figcaption></figure>
+                        </div>
+                        <div class="color-diagram" role="img" aria-label="RGB is transformed into Y, Cb, and Cr channels">
+                            <span class="color-node rgb-node">RGB</span><span class="arrow" aria-hidden="true">→</span>
+                            <span class="color-node y-node">Y<br><small>Luminance</small></span>
+                            <span class="color-node cb-node">Cb<br><small>Chroma</small></span>
+                            <span class="color-node cr-node">Cr<br><small>Chroma</small></span>
+                        </div>
                     </div>
-                </div>
-                <div class="color-diagram" role="img" aria-label="RGB is transformed into Y, Cb, and Cr channels">
-                    <span class="color-node rgb-node">RGB</span><span class="arrow" aria-hidden="true">→</span>
-                    <span class="color-node y-node">Y<br><small>Luminance</small></span>
-                    <span class="color-node cb-node">Cb<br><small>Chroma</small></span>
-                    <span class="color-node cr-node">Cr<br><small>Chroma</small></span>
                 </div>
             </section>
 
             <section id="dct" class="article-section" aria-labelledby="dct-title">
                 <h2 id="dct-title">Discrete cosine transform</h2>
                 <p>Each channel is divided into 8×8 blocks. The DCT replaces 64 pixel values with 64 coefficients. The upper-left coefficient describes the average level; moving right and down increases spatial frequency.</p>
-                <div class="activity-controls" aria-label="Preset for DCT">
+                <!-- <div class="activity-controls" aria-label="Preset for DCT">
                     <span class="mono-label">Preset</span><div class="preset-buttons" role="group"></div>
-                </div>
+                </div> -->
                 <div class="math-display" aria-label="Discrete cosine transform formula">
                     $$ F(u,v) = \frac{1}{4} C(u)C(v) \sum_{x=0}^{7} \sum_{y=0}^{7} f(x,y) \cos\left(\frac{(2x+1)u\pi}{16}\right) \cos\left(\frac{(2y+1)v\pi}{16}\right) $$
                 </div>
-                <figure class="wide-figure">
-                    <canvas id="dct-canvas" width="640" height="640" role="img" aria-label="Grid of 64 DCT basis functions"></canvas>
-                    <figcaption>Figure 1. Sixty-four DCT basis functions: each tile is one spatial frequency.</figcaption>
-                </figure>
-                <p class="technical-note"><code>F(u,v)</code> is a weighted sum of pixels. The transform is reversible; information is discarded later, during quantization.</p>
+                <div class="dct-layout">
+                    <figure class="dct-figure">
+                        <canvas id="dct-canvas" width="320" height="320" role="img" aria-label="Grid of 64 DCT basis functions"></canvas>
+                        <figcaption>Figure 1. 64 DCT basis functions (the image alphabet).</figcaption>
+                    </figure>
+                    <div class="dct-explanation">
+                        <p>These 64 black-and-white tiles are the "building blocks" of the image. Any 8×8 pixel block can be assembled by overlaying them on top of each other with varying intensities (weights).</p>
+                        <p>The top-left tile provides the base solid color and is called the <strong>DC coefficient</strong>. The remaining 63 tiles add ripples, gradients, and fine details — these are the <strong>AC coefficients</strong>.</p>
+                        <p class="technical-note"><code>F(u,v)</code> in the formula above is exactly that weight (transparency multiplier) for each tile. At this stage, no information is lost yet.</p>
+                    </div>
+                </div>
             </section>
 
             <section id="quantization" class="article-section" aria-labelledby="quantization-title">
@@ -114,6 +125,9 @@
                         <figure class="table-figure"><div class="table-scroll"><table id="chrominance-table"><caption>Cb/Cr: chroma</caption><tbody></tbody></table></div><figcaption>Table 2. Chroma divisors.</figcaption></figure>
                         <figure class="quantization-figure"><canvas id="quantization-canvas" width="480" height="320" role="img" aria-label="Image fragment with quantization artifacts"></canvas><figcaption>Figure 2. Result at the selected quality; the grid shows 8×8 blocks.</figcaption></figure>
                     </div>
+                </div>
+                <div class="note">
+                    <strong>Zig-zag scan and Huffman coding.</strong> Quantization fills the matrix with zeros (especially in the bottom-right corner, where high frequencies live). To store this emptiness efficiently, the coefficients are read in a "zig-zag" pattern—from the top-left to the bottom-right. This groups all the zeros into one long continuous chain. Finally, lossless compression algorithms (RLE and Huffman) pack this sequence, turning long rows of zeros into just a few bytes. This is where the file size truly shrinks!
                 </div>
             </section>
 

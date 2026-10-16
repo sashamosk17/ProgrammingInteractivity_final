@@ -58,12 +58,14 @@
                 <h2 id="introduction-title">Введение</h2>
                 <p>JPEG — формат с потерями для изображений с плавными тонами. Он не удаляет случайные пиксели: изображение переводится в форму, которая лучше соответствует ограничениям человеческого зрения.</p>
                 <p>В этой статье один и тот же тестовый кадр проходит через ключевые этапы алгоритма. Меняйте качество ниже и наблюдайте, как таблицы квантования, артефакты и численные метрики меняются одновременно.</p>
-                <div class="note"><strong>Как читать визуализацию.</strong> Числа в таблицах — делители DCT-коэффициентов. Чем больше делитель, тем грубее округляется соответствующая частота.</div>
             </section>
 
             <section id="color-space" class="article-section" aria-labelledby="color-space-title">
                 <h2 id="color-space-title">Цветовое пространство</h2>
                 <p>Экран использует RGB, но JPEG обычно работает с YCbCr. Канал Y содержит яркость, а Cb и Cr — цветность. При прокрутке к блоку появится разложение изображения на каналы.</p>
+                <div class="note">
+                    <strong>Цветовая субдискретизация (Chroma Subsampling).</strong> Глаз человека намного чувствительнее к перепадам яркости, чем к оттенкам цвета. Поэтому перед сжатием разрешение каналов Cb и Cr обычно искусственно уменьшают в 2 или 4 раза (например, форматы 4:2:2 или 4:2:0). Это отбрасывает до половины данных ещё до начала основной математики, почти без видимых потерь.
+                </div>
                 <div class="activity-controls" aria-label="Пресет для цветового пространства">
                     <span class="mono-label">Пресет</span>
                     <div class="preset-buttons" role="group"></div>
@@ -73,39 +75,48 @@
                         <canvas id="color-original-canvas" width="480" height="320" tabindex="0" role="img" aria-label="Оригинальное тестовое изображение"></canvas>
                         <figcaption>RGB: исходное представление</figcaption>
                     </figure>
-                    <div id="channel-preview" class="channel-preview" aria-live="polite">
-                        <figure><canvas id="y-canvas" width="160" height="107" aria-label="Канал Y, яркость"></canvas><figcaption>Y / яркость</figcaption></figure>
-                        <figure><canvas id="cb-canvas" width="160" height="107" aria-label="Канал Cb, цветность"></canvas><figcaption>Cb / сине-жёлтый</figcaption></figure>
-                        <figure><canvas id="cr-canvas" width="160" height="107" aria-label="Канал Cr, цветность"></canvas><figcaption>Cr / красно-зелёный</figcaption></figure>
+                    <div class="color-space-details">
+                        <div id="channel-preview" class="channel-preview" aria-live="polite">
+                            <figure><canvas id="y-canvas" width="160" height="107" aria-label="Канал Y, яркость"></canvas><figcaption>Y / яркость</figcaption></figure>
+                            <figure><canvas id="cb-canvas" width="160" height="107" aria-label="Канал Cb, цветность"></canvas><figcaption>Cb / сине-жёлтый</figcaption></figure>
+                            <figure><canvas id="cr-canvas" width="160" height="107" aria-label="Канал Cr, цветность"></canvas><figcaption>Cr / красно-зелёный</figcaption></figure>
+                        </div>
+                        <div class="color-diagram" role="img" aria-label="RGB преобразуется в каналы Y, Cb и Cr">
+                            <span class="color-node rgb-node">RGB</span><span class="arrow" aria-hidden="true">→</span>
+                            <span class="color-node y-node">Y<br><small>Яркость</small></span>
+                            <span class="color-node cb-node">Cb<br><small>Цветность</small></span>
+                            <span class="color-node cr-node">Cr<br><small>Цветность</small></span>
+                        </div>
                     </div>
-                </div>
-                <div class="color-diagram" role="img" aria-label="RGB преобразуется в каналы Y, Cb и Cr">
-                    <span class="color-node rgb-node">RGB</span><span class="arrow" aria-hidden="true">→</span>
-                    <span class="color-node y-node">Y<br><small>Яркость</small></span>
-                    <span class="color-node cb-node">Cb<br><small>Цветность</small></span>
-                    <span class="color-node cr-node">Cr<br><small>Цветность</small></span>
                 </div>
             </section>
 
             <section id="dct" class="article-section" aria-labelledby="dct-title">
                 <h2 id="dct-title">Дискретное косинусное преобразование</h2>
                 <p>Каждый канал делится на блоки 8×8. ДКП заменяет 64 значения пикселей на 64 коэффициента. Верхний левый коэффициент описывает средний уровень, а движение вправо и вниз повышает пространственную частоту.</p>
-                <div class="activity-controls" aria-label="Пресет для ДКП">
+                <!-- <div class="activity-controls" aria-label="Пресет для ДКП">
                     <span class="mono-label">Пресет</span><div class="preset-buttons" role="group"></div>
-                </div>
+                </div> -->
                 <div class="math-display" aria-label="Формула дискретного косинусного преобразования">
                     $$ F(u,v) = \frac{1}{4} C(u)C(v) \sum_{x=0}^{7} \sum_{y=0}^{7} f(x,y) \cos\left(\frac{(2x+1)u\pi}{16}\right) \cos\left(\frac{(2y+1)v\pi}{16}\right) $$
                 </div>
-                <figure class="wide-figure">
-                    <canvas id="dct-canvas" width="640" height="640" role="img" aria-label="Сетка из 64 базисных функций ДКП"></canvas>
-                    <figcaption>Рисунок 1. Шестьдесят четыре базисные функции ДКП: каждая плитка — одна пространственная частота.</figcaption>
-                </figure>
-                <p class="technical-note"><code>F(u,v)</code> — взвешенная сумма пикселей. Преобразование обратимо; информация теряется позже, на этапе квантования.</p>
+                <div class="dct-layout">
+                    <figure class="dct-figure">
+                        <canvas id="dct-canvas" width="320" height="320" role="img" aria-label="Сетка из 64 базисных функций ДКП"></canvas>
+                        <figcaption>Рисунок 1. 64 базисные функции ДКП (алфавит изображения).</figcaption>
+                    </figure>
+                    <div class="dct-explanation">
+                        <p>Эти 64 чёрно-белые плитки — «строительные блоки» изображения. Любой фрагмент 8×8 пикселей можно собрать, наложив их друг на друга с разной интенсивностью (весом).</p>
+                        <p>Левая верхняя плитка дает базовый сплошной цвет — её называют <strong>DC-коэффициентом</strong>. Остальные 63 плитки добавляют рябь, градиенты и мелкие детали — это <strong>AC-коэффициенты</strong>.</p>
+                        <p class="technical-note"><code>F(u,v)</code> в формуле выше — это как раз тот самый вес (коэффициент прозрачности) для каждой плитки. На этом этапе потерь информации ещё нет.</p>
+                    </div>
+                </div>
             </section>
 
             <section id="quantization" class="article-section" aria-labelledby="quantization-title">
                 <h2 id="quantization-title">Квантование</h2>
                 <p>Квантование делит каждый DCT-коэффициент на значение из таблицы и округляет результат. При низком качестве делители становятся больше, многие коэффициенты превращаются в нули, а мелкие детали исчезают.</p>
+
                 <div class="math-display" aria-label="Формула квантования">
                     $$ \hat{F}(u,v) = \mathrm{round}\left( \frac{F(u,v)}{Q(u,v)} \right) \quad \text{и} \quad \hat{F}_{\text{reconstructed}}(u,v) = \hat{F}(u,v) \cdot Q(u,v) $$
                 </div>
@@ -113,11 +124,6 @@
                     <span class="mono-label">Пресет</span><div class="preset-buttons" role="group"></div>
                 </div>
                 <div class="quantization-layout">
-                    <div class="control-panel">
-                        <label for="quality-slider">Качество JPEG <output id="quality-value" for="quality-slider">75</output>%</label>
-                        <input id="quality-slider" type="range" min="10" max="100" value="75" step="1" aria-valuemin="10" aria-valuemax="100" aria-valuenow="75" aria-describedby="quality-description">
-                        <p id="quality-description" class="control-description">Высокие значения сохраняют больше высокочастотных деталей.</p>
-                    </div>
                     <div class="quantization-columns">
                         <figure class="table-figure">
                             <div class="table-scroll"><table id="luminance-table"><caption>Y: яркость</caption><tbody></tbody></table></div>
@@ -127,11 +133,23 @@
                             <div class="table-scroll"><table id="chrominance-table"><caption>Cb/Cr: цветность</caption><tbody></tbody></table></div>
                             <figcaption>Таблица 2. Делители цветности.</figcaption>
                         </figure>
+                        
                         <figure class="quantization-figure">
                             <canvas id="quantization-canvas" width="480" height="320" role="img" aria-label="Фрагмент изображения с артефактами квантования"></canvas>
                             <figcaption>Рисунок 2. Результат при выбранном качестве; сетка показывает блоки 8×8.</figcaption>
                         </figure>
+                        
+                        
+                        <div class="control-panel">
+                            <label for="quality-slider">Качество JPEG <output id="quality-value" for="quality-slider">75</output>%</label>
+                            <input id="quality-slider" type="range" min="10" max="100" value="75" step="1" aria-valuemin="10" aria-valuemax="100" aria-valuenow="75" aria-describedby="quality-description">
+                            <p id="quality-description" class="control-description">Высокие значения сохраняют больше высокочастотных деталей.</p>
+                        </div>
                     </div>
+                    <div class="note"><strong>Как читать визуализацию.</strong> Числа в таблицах — делители DCT-коэффициентов. Чем больше делитель, тем грубее округляется соответствующая частота.</div>
+                </div>
+                <div class="note">
+                    <strong>Зигзаг-сканирование и кодирование Хаффмана.</strong> Квантование заполняет матрицу нулями (особенно в правом нижнем углу, где живут высокие частоты). Чтобы эффективно сохранить эту пустоту, коэффициенты считывают «зигзагом» — от левого верхнего угла к правому нижнему. Это собирает все нули в одну непрерывную цепочку. Затем алгоритмы сжатия без потерь (RLE и Хаффмана) упаковывают эту последовательность, превращая длинные ряды нулей в пару байт. Именно здесь файл становится по-настоящему маленьким!
                 </div>
             </section>
 

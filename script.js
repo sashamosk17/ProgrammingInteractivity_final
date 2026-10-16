@@ -60,24 +60,64 @@ function drawDctBasis() {
     }
 }
 function createOriginalImage() {
-    const image = new ImageData(state.width, state.height);
-    for (let y = 0; y < state.height; y += 1) for (let x = 0; x < state.width; x += 1) {
-        const i = (y * state.width + x) * 4;
-        const wave = Math.sin(x / 18) * 12 + Math.sin(y / 13) * 8;
-        let red, green, blue;
-        if (state.preset === "texture") {
-            const stripe = (Math.sin(x / 3) + Math.sin(y / 4)) * 30;
-            red = 105 + stripe + wave; green = 75 + stripe * .7 + y * .25; blue = 55 + stripe * .35;
-        } else if (state.preset === "portrait") {
-            const circle = ((x - 330) ** 2 + (y - 120) ** 2) < 65 ** 2;
-            red = 48 + x * .18 + wave + (circle ? 110 : 0); green = 75 + y * .35 + wave; blue = 105 + (state.height - y) * .25 + wave + (circle ? 20 : 0);
-        } else {
-            red = 48 + x * .18 + wave; green = 75 + y * .35 + wave; blue = 105 + (state.height - y) * .25 + wave;
+    // Создаем временный холст для рисования
+    const canvas = document.createElement("canvas");
+    canvas.width = state.width;
+    canvas.height = state.height;
+    const ctx = canvas.getContext("2d");
+
+    if (state.preset === "landscape") {
+        // Пейзаж: Небо, земля и солнце (плавные градиенты, отлично сжимаются)
+        const grad = ctx.createLinearGradient(0, 0, 0, state.height);
+        grad.addColorStop(0, "#4a90e2");   // синее небо
+        grad.addColorStop(0.5, "#87ceeb"); // светлый горизонт
+        grad.addColorStop(0.5, "#556b2f"); // темная трава вдалеке
+        grad.addColorStop(1, "#228b22");   // зеленая трава
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, state.width, state.height);
+        
+        ctx.fillStyle = "#fff0a8";
+        ctx.beginPath();
+        ctx.arc(80, 80, 35, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (state.preset === "portrait") {
+        // Портрет: мягкий круг в центре (имитация лица)
+        ctx.fillStyle = "#e0e4e8";
+        ctx.fillRect(0, 0, state.width, state.height);
+        
+        const grad = ctx.createRadialGradient(state.width/2, state.height/2, 10, state.width/2, state.height/2, 120);
+        grad.addColorStop(0, "#ffb6c1");
+        grad.addColorStop(1, "#c71585");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(state.width/2, state.height/2, 110, 0, Math.PI * 2);
+        ctx.fill();
+    } else {
+        // Текстура / Шахматка: резкие контрасты (покажут артефакты и ringing-эффект)
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, state.width, state.height);
+        ctx.fillStyle = "#252525";
+        
+        for (let y = 0; y < state.height; y += 40) {
+            for (let x = 0; x < state.width; x += 40) {
+                if ((x / 40 + Math.floor(y / 40)) % 2 === 0) {
+                    ctx.fillRect(x, y, 40, 40);
+                }
+            }
         }
-        image.data[i] = clamp(red); image.data[i + 1] = clamp(green); image.data[i + 2] = clamp(blue); image.data[i + 3] = 255;
+        // Резкий красный текст
+        ctx.fillStyle = "#e63946";
+        ctx.font = "bold 110px 'Courier New', monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("JPEG", state.width/2, state.height/2);
     }
-    state.originalData = image;
-    [elements.originalCanvas, elements.colorOriginalCanvas].forEach(canvas => canvas.getContext("2d").putImageData(image, 0, 0));
+
+    // Извлекаем пиксели и отдаем логике
+    const imageData = ctx.getImageData(0, 0, state.width, state.height);
+    state.originalData = imageData;
+    elements.originalCanvas.getContext("2d").putImageData(imageData, 0, 0);
+    elements.colorOriginalCanvas.getContext("2d").putImageData(imageData, 0, 0);
     drawChannels();
 }
 function drawChannels() {
