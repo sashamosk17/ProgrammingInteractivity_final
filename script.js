@@ -69,10 +69,10 @@ function createOriginalImage() {
     if (state.preset === "landscape") {
         // Пейзаж: Небо, земля и солнце (плавные градиенты, отлично сжимаются)
         const grad = ctx.createLinearGradient(0, 0, 0, state.height);
-        grad.addColorStop(0, "#4a90e2");   // синее небо
-        grad.addColorStop(0.5, "#87ceeb"); // светлый горизонт
-        grad.addColorStop(0.5, "#556b2f"); // темная трава вдалеке
-        grad.addColorStop(1, "#228b22");   // зеленая трава
+        grad.addColorStop(0, "#4a90e2");  
+        grad.addColorStop(0.5, "#87ceeb");
+        grad.addColorStop(0.5, "#556b2f");
+        grad.addColorStop(1, "#228b22");
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, state.width, state.height);
         
@@ -81,7 +81,6 @@ function createOriginalImage() {
         ctx.arc(80, 80, 35, 0, Math.PI * 2);
         ctx.fill();
     } else if (state.preset === "portrait") {
-        // Портрет: мягкий круг в центре (имитация лица)
         ctx.fillStyle = "#e0e4e8";
         ctx.fillRect(0, 0, state.width, state.height);
         
@@ -93,7 +92,6 @@ function createOriginalImage() {
         ctx.arc(state.width/2, state.height/2, 110, 0, Math.PI * 2);
         ctx.fill();
     } else {
-        // Текстура / Шахматка: резкие контрасты (покажут артефакты и ringing-эффект)
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, state.width, state.height);
         ctx.fillStyle = "#252525";
@@ -113,7 +111,6 @@ function createOriginalImage() {
         ctx.fillText("JPEG", state.width/2, state.height/2);
     }
 
-    // Извлекаем пиксели и отдаем логике
     const imageData = ctx.getImageData(0, 0, state.width, state.height);
     state.originalData = imageData;
     elements.originalCanvas.getContext("2d").putImageData(imageData, 0, 0);
